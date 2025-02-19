@@ -1,7 +1,10 @@
 from tinydb import TinyDB
-import os, re, shutil, subprocess
+import os
+import re
+import shutil
+import subprocess
 
-MAIN_MODEL_DEFAULT = "gemma:7b"
+MAIN_MODEL_DEFAULT = "deepseek-r1:14b"  # "gemma:7b"
 FAST_MODEL_DEFAULT = "mistral"
 MAIN_MODEL_NAME = "ragmain"
 
@@ -12,14 +15,17 @@ db = TinyDB('./config.json')
 agent_table = db.table('agent')
 model_table = db.table('model')
 
+
 def start():
-    os.environ["TOKENIZERS_PARALLELISM"] = "false" # required to run Chroma DB properly on CPU
+    # required to run Chroma DB properly on CPU
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     print("*** CONFIG TOOL")
     configAgent()
     configModel()
     writeModelfile()
     createModel()
     print("*** CONFIG IS COMPLETE")
+
 
 def configAgent():
     row = None
@@ -31,7 +37,8 @@ def configAgent():
     if row.get("agent_type") == None:
         user_input = inputForAccepted(
             "Chatbot agent type/description:",
-            lambda: input("E.g. \"a research assistant\"\n> The chatbot agent is... "),
+            lambda: input(
+                "E.g. \"a research assistant\"\n> The chatbot agent is... "),
             lambda _: print("Accept?")
         ).strip()
         row["agent_type"] = user_input
@@ -55,7 +62,8 @@ def configAgent():
     if row.get("agent_attitude") == None:
         user_input = inputForAccepted(
             "Agent attitude:",
-            lambda: input(f"E.g. \"researches new topics and discusses existing research.\"\n> {row['agent_name']}... "),
+            lambda: input(
+                f"E.g. \"researches new topics and discusses existing research.\"\n> {row['agent_name']}... "),
             lambda _: print("Accept?")
         ).strip()
         row["agent_attitude"] = user_input
@@ -70,6 +78,7 @@ def configAgent():
         agent_table.update(row, doc_ids=[1])
     print("Agent config is complete")
 
+
 def configModel():
     row = None
     if len(model_table.all()) > 0:
@@ -80,7 +89,8 @@ def configModel():
     if row.get("main_model_source") == None:
         user_input = inputForAccepted(
             "Ollama model or GGUF file path for custom main model:",
-            lambda: input(f"(Empty for default \'{MAIN_MODEL_DEFAULT}\')> Model or GGUF file path: "),
+            lambda: input(
+                f"(Empty for default \'{MAIN_MODEL_DEFAULT}\')> Model or GGUF file path: "),
             lambda _: print("Accept?")
         ).strip()
         if user_input == "":
@@ -90,7 +100,8 @@ def configModel():
     if row.get("fast_model") == None:
         user_input = inputForAccepted(
             "Small and fast Ollama model for simpler cases:",
-            lambda: input(f"(Empty for default \'{FAST_MODEL_DEFAULT}\')> Model: "),
+            lambda: input(
+                f"(Empty for default \'{FAST_MODEL_DEFAULT}\')> Model: "),
             lambda _: print("Accept?")
         ).strip()
         if user_input == "":
@@ -98,6 +109,7 @@ def configModel():
         row["fast_model"] = user_input
         model_table.update(row, doc_ids=[1])
     print("Model config is complete")
+
 
 def writeModelfile():
     print("Creating Modelfile for Ollama...")
@@ -120,11 +132,13 @@ def writeModelfile():
             contents = re.sub(f"\\[{str(key)}\\]", value, contents)
     with open(MODELFILE_GENERATED, 'w') as file:
         file.write(contents)
-    
+
 
 def createModel():
     print("Creating model from modelfile using Ollama...")
-    subprocess.check_output(f"ollama create {MAIN_MODEL_NAME} -f {MODELFILE_GENERATED}", shell=True)
+    subprocess.check_output(
+        f"ollama create {MAIN_MODEL_NAME} -f {MODELFILE_GENERATED}", shell=True)
+
 
 def flatten(list_of_dicts):
     result = {}
@@ -137,6 +151,7 @@ def flatten(list_of_dicts):
                 if not attr_name.startswith('__') and not callable(getattr(d, attr_name)):
                     result[attr_name] = getattr(d, attr_name)
     return result
+
 
 def inputForAccepted(title, generator, confirmation=None):
     isAccepted = False
@@ -152,9 +167,11 @@ def inputForAccepted(title, generator, confirmation=None):
             print("-----------------------------")
     return data
 
+
 def inputAccepted():
     accept = input("> Accept [y/n]?")
     return re.search("y", accept, re.IGNORECASE) != None
+
 
 if __name__ == "__main__":
     start()
